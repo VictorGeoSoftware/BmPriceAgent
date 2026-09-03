@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PriceProposalExtraction",
+  "description": "Structured output schema for Spanish electricity price-proposal extraction. Matches the producto-based contract consumed by BmBackend (normalizeDoclingPriceTablesResponse). Definitions are inlined (no $ref) for maximum provider compatibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["filename", "producto"],
+  "properties": {
+    "filename": {
+      "type": "string",
+      "description": "Provider/company short name in uppercase (ADX, ELEIA, TOTAL, GESTERNOVA, ENDESA, IBERDROLA, REPSOL, ...)."
+    },
+    "producto": {
+      "type": "array",
+      "description": "One entry per commercial product/campaign in the document.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "unidadPotencia", "unidadEnergia", "descuentoEnergiaPct", "preciosPotencia", "preciosEnergia"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Product name as printed in the proposal, verbatim."
+          },
+          "descuentoEnergiaPct": {
+            "type": ["number", "null"],
+            "description": "Total additive discount percentage to apply to ENERGY prices only (e.g. 20 for 10% bienvenida + 10% promocional). null when no discount applies. Never apply it yourself — always report base prices as printed."
+          },
+          "unidadPotencia": {
+            "type": "string",
+            "enum": ["EUR_KW_DIA", "EUR_KW_MES", "EUR_KW_ANO", "NONE"],
+            "description": "Unit in which power prices are PRINTED in the document: €/kW·día, €/kW·mes, €/kW·año. NONE if no power prices exist. Values in preciosPotencia must be the printed numbers, unconverted."
+          },
+          "unidadEnergia": {
+            "type": "string",
+            "enum": ["EUR_KWH", "CENT_KWH", "NONE"],
+            "description": "Unit in which energy prices are PRINTED: €/kWh or cents (c€/kWh, cts). NONE if no energy prices exist. Values in preciosEnergia must be the printed numbers, unconverted."
+          },
+          "preciosPotencia": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tarifa"],
+            "properties": {
+              "tarifa": {
+                "type": "array",
+                "description": "One entry per tariff type (2.0TD, 3.0TD, 6.1TD, ...). Power prices in the printed unit.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "p1", "p2", "p3", "p4", "p5", "p6"],
+                  "properties": {
+                    "name": { "type": "string", "description": "Tariff type normalized uppercase without spaces, e.g. 2.0TD." },
+                    "p1": { "type": ["number", "null"] },
+                    "p2": { "type": ["number", "null"] },
+                    "p3": { "type": ["number", "null"] },
+                    "p4": { "type": ["number", "null"] },
+                    "p5": { "type": ["number", "null"] },
+                    "p6": { "type": ["number", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "preciosEnergia": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tarifa"],
+            "properties": {
+              "tarifa": {
+                "type": "array",
+                "description": "One entry per tariff type (2.0TD, 3.0TD, 6.1TD, ...). Energy prices in EUR/kWh (cents converted).",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "p1", "p2", "p3", "p4", "p5", "p6"],
+                  "properties": {
+                    "name": { "type": "string", "description": "Tariff type normalized uppercase without spaces, e.g. 2.0TD." },
+                    "p1": { "type": ["number", "null"] },
+                    "p2": { "type": ["number", "null"] },
+                    "p3": { "type": ["number", "null"] },
+                    "p4": { "type": ["number", "null"] },
+                    "p5": { "type": ["number", "null"] },
+                    "p6": { "type": ["number", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
