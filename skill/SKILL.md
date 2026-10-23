@@ -166,6 +166,26 @@ recorded for when it lands, and for any Iberdrola PDF.)
   6.1TD: Plan Exclusivo 15%TE, Plan Empresas 10%TE, Plan Exclusivo 15%/30%TE.
 - Power printed €/kW·año → EUR_KW_ANO.
 
+### REPSOL
+
+- **Product whitelist** — extract ONLY these 5 products (skip all other 2.0TD,
+  3.0TD, 6.1TD, indexed, solar, and GAS rows):
+  - **2.0TD** (`POTENCIA HASTA 10kW`):
+    - `Tarifa Sin Horarios 2.0TD_PB RES <10KW AV`
+    - `Tarifa Sin Horarios Hogar 2.0TD_PB RES <10KW AV + SVA`
+    - `Tarifa Sin Horarios 2.0TD_PB RES <10KW MV`
+    - `Batería Virtual 2.0TD_PB RES <15KW GdO MV`
+  - **3.0TD** (`POTENCIA CONTRATADA DE +10kW`):
+    - `Tarifa Empresa 3.0 3.0TD_PB SUPERCLIENTE L8`
+- **Flat energy on 2.0TD (`TE1` → `P1`–`P3`)**: Repsol prints the single 24h
+  energy price for the 4 whitelisted 2.0TD products only in the `TE1` column
+  (`TE2`–`TE6` blank). Because 2.0TD uses three energy periods, repeat that
+  printed `TE1` value across `p1`, `p2`, and `p3` (`p4`–`p6` = `null`).
+- **Final prices (no discounts)**: printed prices are final
+  (`descuentoEnergiaPct = null`). Energy is printed in cents (`c€/kWh` →
+  `unidadEnergia = "CENT_KWH"`); power is printed in `€/kW·día`
+  (`unidadPotencia = "EUR_KW_DIA"`, `P1`–`P2` for 2.0TD, `P1`–`P6` for 3.0TD).
+
 ## Known provider notes
 
 - **ADX**: campaigns CLASSIC / CHEFF / PPA in APP and BRIEL variants. Product
@@ -207,11 +227,12 @@ recorded for when it lands, and for any Iberdrola PDF.)
 - **IBERDROLA**: "Plan Empresa FLEX" is a **scanned PDF** (no text layer) —
   requires the vision path. "Solar Cloud / Batería Virtual" docs are
   excedentes-only → empty `producto`.
-- **REPSOL**: one row per product; column blocks TE1–TE6 (energy, printed in
+- **REPSOL**: extract ONLY the 5 whitelisted products (see "Provider selection
+  rules"). One row per product; column blocks TE1–TE6 (energy, printed in
   **cents c€/kWh** → declare CENT_KWH, do not convert) then TP1–TP6 (power,
-  €/kW·día). Tariff column may read `6.1 TD` (with space) or `GAS` (skip the
-  row). Channel codes (A/S/C/SC/P) and monthly-quota fees (e.g. 13,99 €/mes
-  flat-fee tariffs) are not p1..p6 prices.
+  €/kW·día → EUR_KW_DIA). For the 4 whitelisted 2.0TD flat tariffs, repeat
+  the single printed TE1 value across `p1`–`p3` (`p4`–`p6` = `null`).
+  Channel codes (A/S/C/SC/P) and GAS rows are not extracted.
 - New providers: apply the general rules; do not force-fit the above.
 
 ## Canonical product names (registry)
@@ -237,7 +258,8 @@ For providers/families not listed, use the most complete verbatim printed name
 - Some documents band prices by contracted power (ENDESA MultiOferta: Pc≤15kW,
   15<Pc≤50kW, …). Extract the band matching the document's scope — a
   "Residencial max 15 kW" document uses the Pc≤15kW band.
-- Flat energy prices (TOTAL UNICA, ENDESA Tempo Open / Tu Otra Casa) repeat the
+- Flat energy prices (TOTAL UNICA, ENDESA Tempo Open / Tu Otra Casa, REPSOL
+  2.0TD Sin Horarios / Batería Virtual where only TE1 is printed) repeat the
   same value across **only the periods the tariff uses**: 2.0TD → P1–P3,
   3.0TD/6.xTD → P1–P6. Never fill P4–P6 for a 2.0TD product.
 - Some PDFs mix Spanish (0,198840) and English (0.198840) decimal formats in
