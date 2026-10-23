@@ -1,0 +1,76 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+    # Docs-only pushes cannot affect the running service. Note: skill/SKILL.md
+    # is baked into the image, so it must NOT be ignored here.
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:  # Allow manual trigger
+
+# price-agent runs as a Docker container orchestrated by the BmInfra compose
+# project on the VPS. app/ and skill/ are COPY'd into the image at build time,
+# so every change requires pulling the code and rebuilding the image there.
+
+concurrency:
+  group: deploy-price-agent
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS (Docker)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 217.154.181.175 >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        run: |
+          ssh root@217.154.181.175 "set -e
+            echo '📦 Pulling latest BmPriceAgent (main)...'
+            cd /opt/bm/BmPriceAgent
+            git fetch origin
+            git reset --hard origin/main
+            git log --oneline -1
+
+            cd /opt/bm/BmInfra
+
+            echo '🐳 Rebuilding price-agent image (bm/price-agent:latest)...'
+            docker compose build price-agent
+
+            echo '🔄 Recreating price-agent container...'
+            docker compose up -d --no-deps price-agent
+          "
+
+      - name: Health check
+        run: |
+          # Wait for the container healthcheck (up to ~2 min), then verify
+          # the service reports ready (requires GEMINI_API_KEY on the VPS).
+          ssh root@217.154.181.175 "
+            for i in \$(seq 1 24); do
+              if curl -fsS http://localhost:5002/ready; then
+                echo
+                echo '✅ price-agent is healthy and ready!'
+                exit 0
+              fi
+              sleep 5
+            done
+            echo '❌ price-agent did not become ready in time'
+            exit 1
+          "
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Recent price-agent logs:"
+          ssh root@217.154.181.175 "cd /opt/bm/BmInfra && docker compose logs --tail=100 price-agent" || true
